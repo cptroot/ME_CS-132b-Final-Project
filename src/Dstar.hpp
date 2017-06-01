@@ -20,7 +20,7 @@ struct cell {
     cell(double a, double b, double c, double d, coordinate e) : h(a), k(b), b(c), t(d), loc(e) {}    
 };
 
-class Dstar() {
+class Dstar {
     public:
         Dstar();
         ~Dstar();
