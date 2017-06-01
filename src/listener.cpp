@@ -25,7 +25,7 @@ void octomapCallback(const octomap_msgs::Octomap& msg)
 
   ROS_INFO("Tree size: %lu", tree->size());
 
-  dstar.new_octree(tree);
+  dstar.change_map(tree);
 }
 
 geometry_msgs::Twist get_next_move(
@@ -81,7 +81,6 @@ int main(int argc, char **argv)
   ros::Rate loop_rate(10);
 
   while (ros::ok()) {
-    auto path = dstar.get_current_path();
     geometry_msgs::Twist msg;
     geometry_msgs::TransformStamped transformStamped;
     try {
@@ -94,7 +93,11 @@ int main(int argc, char **argv)
         continue;
     }
 
-    msg = get_next_move(path, transformStamped.transform);
+    auto transform = transformStamped.transform;
+    coordinate current_cell(transform.translation.x, transform.translation.y);
+    auto path = dstar.navigate_map(current_cell);
+
+    msg = get_next_move(path, transform);
 
     cmd_vel_publisher.publish(msg);
 

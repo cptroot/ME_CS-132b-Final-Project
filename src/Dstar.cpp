@@ -1,15 +1,6 @@
 #include <stdio.h>
-#include <queue>
 
 Dstar::Dstar() {
-    int world_x;
-    int world_y;
-    cell* world;
-    int start;
-    int goal;
-    int size;
-    std::priority_queue<cell> pqueue;
-    
     world = new cell[world_x * world_y]
 }
 
