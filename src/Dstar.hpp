@@ -6,11 +6,13 @@ struct coordinate {
     coordinate(int a, int b) : x(a), y(b) {}
 };
 
-// Access cell values:
-//   h:      path cost
-//   k:      smallest value of h seen so far
-//   b:      back pointer
-//   t:      tag ('c' - closed; 'o' - open; 'n' - new)
+/*
+Access cell values:
+   h:      path cost
+   k:      smallest value of h seen so far
+   b:      back pointer
+   t:      tag ('c' - closed; 'o' - open; 'n' - new)
+*/
 struct cell {
     double h;
     double k;
