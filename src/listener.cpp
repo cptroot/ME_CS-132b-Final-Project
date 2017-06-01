@@ -1,10 +1,18 @@
-#include "ros/ros.h"
-#include "std_msgs/String.h"
+#include <ros/ros.h>
+#include <tf2_ros/transform_listener.h>
+#include <std_msgs/String.h>
 
-#include "octomap_msgs/Octomap.h"
-#include "octomap_msgs/conversions.h"
+#include <geometry_msgs/Twist.h>
 
-#include "octomap/octomap.h"
+#include <octomap_msgs/Octomap.h>
+#include <octomap_msgs/conversions.h>
+
+#include <octomap/octomap.h>
+
+
+#include "Dstar.hpp"
+
+Dstar dstar;
 
 /**
  * This tutorial demonstrates simple receipt of messages over the ROS system.
@@ -16,6 +24,16 @@ void octomapCallback(const octomap_msgs::Octomap& msg)
   octomap::AbstractOcTree * tree = octomap_msgs::msgToMap(msg);
 
   ROS_INFO("Tree size: %lu", tree->size());
+
+  dstar.new_octree(tree);
+}
+
+geometry_msgs::Twist get_next_move(
+        std::vector<coordinate> path,
+        geometry_msgs::Transform) {
+  geometry_msgs::Twist result;
+
+  return result;
 }
 
 int main(int argc, char **argv)
@@ -30,7 +48,7 @@ int main(int argc, char **argv)
    * You must call one of the versions of ros::init() before using any other
    * part of the ROS system.
    */
-  ros::init(argc, argv, "listener");
+  ros::init(argc, argv, "dstar");
 
   /**
    * NodeHandle is the main access point to communications with the ROS system.
@@ -55,13 +73,35 @@ int main(int argc, char **argv)
    * away the oldest ones.
    */
   ros::Subscriber sub = n.subscribe("octomap", 10, octomapCallback);
+  ros::Publisher cmd_vel_publisher = n.advertise<geometry_msgs::Twist>("cmd_vel", 10);
 
-  /**
-   * ros::spin() will enter a loop, pumping callbacks.  With this version, all
-   * callbacks will be called from within this thread (the main one).  ros::spin()
-   * will exit when Ctrl-C is pressed, or the node is shutdown by the master.
-   */
-  ros::spin();
+  tf2_ros::Buffer tfBuffer;
+  tf2_ros::TransformListener tfListener(tfBuffer);
+
+  ros::Rate loop_rate(10);
+
+  while (ros::ok()) {
+    auto path = dstar.get_current_path();
+    geometry_msgs::Twist msg;
+    geometry_msgs::TransformStamped transformStamped;
+    try {
+        transformStamped =
+            tfBuffer.lookupTransform("/world", "/base_link",
+            ros::Time(0));
+    } catch (tf2::TransformException &ex) {
+        ROS_WARN("%s",ex.what());
+        ros::Duration(1.0).sleep();
+        continue;
+    }
+
+    msg = get_next_move(path, transformStamped.transform);
+
+    cmd_vel_publisher.publish(msg);
+
+    ros::spinOnce();
+
+    loop_rate.sleep();
+  }
 
   return 0;
 }

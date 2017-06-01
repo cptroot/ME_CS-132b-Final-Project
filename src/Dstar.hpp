@@ -8,7 +8,7 @@ struct cell {
     cell(float a, float b, float c, char d) : h(a), k(b), b(c), t(d) {}    
 };
 
-class Dstar() {
+class Dstar {
     public:
         Dstar();
         ~Dstar();

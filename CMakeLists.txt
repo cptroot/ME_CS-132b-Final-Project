@@ -9,6 +9,7 @@ find_package(catkin REQUIRED COMPONENTS
   octomap_msgs
   roscpp
   std_msgs
+  geometry_msgs
 )
 
 find_package(octomap REQUIRED)
