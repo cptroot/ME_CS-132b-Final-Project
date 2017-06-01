@@ -2,6 +2,9 @@
 #include "std_msgs/String.h"
 
 #include "octomap_msgs/Octomap.h"
+#include "octomap_msgs/conversions.h"
+
+#include "octomap/octomap.h"
 
 /**
  * This tutorial demonstrates simple receipt of messages over the ROS system.
@@ -9,6 +12,10 @@
 void octomapCallback(const octomap_msgs::Octomap& msg)
 {
   ROS_INFO("I heard: [%s]", msg.id.c_str());
+
+  octomap::AbstractOcTree * tree = octomap_msgs::msgToMap(msg);
+
+  ROS_INFO("Tree size: %lu", tree->size());
 }
 
 int main(int argc, char **argv)
