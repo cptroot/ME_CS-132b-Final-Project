@@ -34,24 +34,13 @@ class Dstar {
     public:
         Dstar();
         ~Dstar();
-        cell get(coordinate n);
-        cell put(coordinate n, cell item);
-        // auto get_open();  
-        void put_open(cell);
-        // get_kmin():
-        
-       double get_cost(cell curr1, cell curr2);
-       std::vector<coordinate> get_path(cell curr);
-       std::vector<coordinate> get_neighhors(cell curr);
        
-       /*************************************/
-       
-       std::vector<coordinate> init_path();
-       void change_map(octomap::AbstractOcTree*);
-       std::vector<coordinate> navigate_map(coordinate curr);
-       // depends on get_kmin // modify_costs(cell curr1, cell curr2, float new_cost);
-       void insert(cell curr, double new_h);
-       // depends on get_kmin // process_state();
+        std::vector<coordinate> init_path();
+        void change_map(octomap::AbstractOcTree*);
+        std::vector<coordinate> navigate_map(coordinate curr);
+        double modify_costs(cell curr1, cell curr2, float new_cost);
+        void insert(cell curr, double new_h);
+        double process_state();
         
     private:
         int world_x;
@@ -61,5 +50,15 @@ class Dstar {
         int goal;
         int size;
         std::priority_queue<cell> pqueue;
+
+        cell get(coordinate n);
+        cell put(coordinate n, cell item);
+        std::tuple<double, cell> get_open();  
+        void put_open(cell);
+        double get_kmin():
+            
+        double get_cost(cell curr1, cell curr2);
+        std::vector<coordinate> get_path(cell curr);
+        std::vector<coordinate> get_neighhors(cell curr);
 };
 
