@@ -24,7 +24,7 @@ enum Tag {
 struct cell {
     double h;
     double k;
-    double b;
+    cell b;
     Tag t = Tag::New;
     coordinate loc;
     cell(double a, double b, double c, Tag d, coordinate e) : h(a), k(b), b(c), t(d), loc(e) {}    
@@ -46,10 +46,10 @@ class Dstar {
         int world_x;
         int world_y;
         cell* world;
-        int start;
-        int goal;
+        coordinate start;
+        coordinate goal;
         int size;
-        std::priority_queue<cell> pqueue;
+        std::priority_queue<std::tuple<double, coordinate> pqueue;
 
         cell get(coordinate n);
         cell put(coordinate n, cell item);
@@ -59,6 +59,6 @@ class Dstar {
             
         double get_cost(cell curr1, cell curr2);
         std::vector<coordinate> get_path(cell curr);
-        std::vector<coordinate> get_neighhors(cell curr);
+        std::vector<cell> get_neighhors(cell curr);
 };
 
