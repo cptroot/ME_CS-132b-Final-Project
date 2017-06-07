@@ -16,6 +16,12 @@ std::vector<coordinate> Dstar::init_path() {
     }
 }
 
+void Dstar::change_map(octomap::AbstractOcTree*);
+std::vector<coordinate> Dstar::navigate_map(coordinate curr);
+double Dstar::modify_costs(cell curr1, cell curr2, float new_cost);
+void Dstar::insert(cell curr, double new_h);
+double Dstar::process_state();
+
 Dstar::Dstar() {
     world = new cell[world_x * world_y]
 }
