@@ -3,27 +3,28 @@
 #include <algorithm>
 
 std::vector<coordinate> Dstar::init_path() {
-    cell goal_c = Cell(0, 0, 0 ,Tag::Open, goal);
-    goal_c.b = goal;
-    put(goal, goal_c);
+    cell * goal_c = get_ptr(goal);
+    *goal_c = cell(0, 0, goal_c, Tag::Open, goal);
     
     while (1) {
-        double k_min = process_state();
-        cell start_c = get(start);
-        if (k_min == NONE) || (start.t == Tag::Closed) {
-            return get_path(start_c)
+        get_kmin_result k_min = process_state();
+        cell * start_c = get_ptr(start);
+        if ((k_min.exists == false) || (start_c->t == Tag::Closed)) {
+            return get_path(start_c);
         }
     }
 }
 
-void Dstar::change_map(octomap::AbstractOcTree*);
-std::vector<coordinate> Dstar::navigate_map(coordinate curr);
-double Dstar::modify_costs(cell curr1, cell curr2, float new_cost);
-void Dstar::insert(cell curr, double new_h);
-double Dstar::process_state();
+//void Dstar::change_map(octomap::AbstractOcTree*);
+//std::vector<coordinate> Dstar::navigate_map(coordinate curr);
+//double Dstar::modify_costs(cell curr1, cell curr2, float new_cost);
+//void Dstar::insert(cell curr, double new_h);
+//get_kmin_result Dstar::process_state();
 
-Dstar::Dstar() {
-    world = new cell[world_x * world_y]
+Dstar::Dstar(coordinate size, coordinate start, coordinate goal) :
+        size(size), start(start), goal(goal) {
+    world = new cell[size.x * size.y];
+    costs = new double[size.x * size.y];
 }
 
 Dstar::~Dstar() {
@@ -31,70 +32,76 @@ Dstar::~Dstar() {
 }
 
 cell Dstar::get(coordinate n) {
-    row_length = world_x;
-    return world[n.x + n.y * row_length];
+    return world[n.x + n.y * size.x];
+}
+
+cell * Dstar::get_ptr(coordinate n) {
+    return &world[n.x + n.y * size.x];
 }
 
 void Dstar::put(coordinate n, cell curr) {
-    row_length = world_x;
-    world[n.x + n.y * row_length] = curr;   
+    *get_ptr(n) = curr;   
 }
 
-std::tuple<double, cell> Dstar::get_open() {
+std::tuple<double, cell *> Dstar::get_open() {
     if (!pqueue.empty()) {
         auto item = pqueue.top();
         pqueue.pop();
         coordinate location = std::get<1>(item);
-        cell curr = get(location);
-        curr.t = Tag::Closed;
+        cell *curr = get_ptr(location);
+        curr->t = Tag::Closed;
 
-        std::tuple<double, cell> val = std::make_tuple(std::get<0>(item), curr);
-        return val;
+        return std::make_tuple(std::get<0>(item), curr);
         
     }
     else {
-        return std::tuple<double, cell> val = std::make_tuple(NONE, NONE);
+        return std::make_tuple(-1.0, (cell *)NULL);
     }
 }
 
-void Dstar::put_open(cell curr) {
-    curr.t = Tag::Open;
+void Dstar::put_open(cell * curr) {
+    curr->t = Tag::Open;
     // open_cells
     
-    std::tuple<double, coordinate> item = std::make_tuple(cell.h, cell.loc);
+    auto item = std::make_tuple(curr->h, curr->loc);
     pqueue.push(item);
 }
 
-double Dstar::get_kmin() {
+get_kmin_result Dstar::get_kmin() {
+    get_kmin_result result;
     if (!pqueue.empty()) {
         auto item = pqueue.top();
-        return std::get<0>(item);
+        result.exists = true;
+        result.kmin = std::get<0>(item);
+        return result;
     }
     else {
-        return NONE;
+        result.exists = false;
+        result.kmin = -1;
+        return result;
     }
 }
 
 double Dstar::get_cost(cell curr1, cell curr2) {
     // Unsure what structure of cost
-    return cost;
+    return costs[curr2.loc.x + curr2.loc.y * size.x];
 }
 
-std::vector<coordinate> Dstar::get_path(cell curr) {
+std::vector<coordinate> Dstar::get_path(cell *curr) {
     std::vector<coordinate> path;
-    path.push_back(curr.loc);
+    path.push_back(curr->loc);
     
-    cell temp;
+    cell * temp = curr;
     while (1) {
-        temp = curr.b;
+        temp = temp->b;
         
-        if (curr == NONE) {
-            return NONE;
+        if (temp == NULL) {
+            return std::vector<coordinate>(0);
         }
         else {
-            path.push_back(temp.loc);
+            path.push_back(temp->loc);
             
-            if (temp.loc.x == goal.x) and (temp.loc.y == goal.y) {
+            if ((temp->loc.x == goal.x) and (temp->loc.y == goal.y)) {
                 return path;
             }
         }          
@@ -102,17 +109,17 @@ std::vector<coordinate> Dstar::get_path(cell curr) {
 }
 
 std::vector<cell> Dstar::get_neighhors(cell curr) {
-    std::vector<coordinate> neighbors;
+    std::vector<cell> neighbors;
     int x = curr.loc.x;
     int y = curr.loc.y;
     
     int min_y = std::max(0, y - 1);
-    int max_y = std::min(world_y - 1, y + 1);
+    int max_y = std::min(size.y - 1, y + 1);
     int min_x = std::max(0, x - 1);
-    int max_x = std::min(world_x - 1, x + 1);
+    int max_x = std::min(size.x - 1, x + 1);
     
     for (int j = min_y; j < max_y + 1; j++) {
-        for (int i = min_x, i < max_x + 1) {
+        for (int i = min_x; i < max_x + 1; i++) {
             coordinate loc;
             loc.x = i;
             loc.y = j;

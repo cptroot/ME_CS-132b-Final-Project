@@ -9,6 +9,7 @@ find_package(catkin REQUIRED COMPONENTS
   octomap
   octomap_msgs
   roscpp
+  tf2_ros
   std_msgs
   geometry_msgs
 )
@@ -122,7 +123,7 @@ include_directories(
   ${OCTOMAP_INCLUDE_DIRS}
 )
 link_libraries(${OCTOMAP_LIBRARIES})
-add_executable(listener src/listener.cpp)
+add_executable(listener src/listener.cpp src/Dstar.cpp)
 target_link_libraries(listener ${catkin_LIBRARIES})
 
 ## Declare a C++ library

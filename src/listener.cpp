@@ -12,7 +12,7 @@
 
 #include "Dstar.hpp"
 
-Dstar dstar;
+Dstar *dstar;
 
 /**
  * This tutorial demonstrates simple receipt of messages over the ROS system.
@@ -25,7 +25,7 @@ void octomapCallback(const octomap_msgs::Octomap& msg)
 
   ROS_INFO("Tree size: %lu", tree->size());
 
-  dstar.change_map(tree);
+  dstar->change_map(tree);
 }
 
 geometry_msgs::Twist get_next_move(
@@ -38,6 +38,7 @@ geometry_msgs::Twist get_next_move(
 
 int main(int argc, char **argv)
 {
+    dstar = new Dstar(coordinate(100, 100), coordinate(0, 0), coordinate(100, 100));
   /**
    * The ros::init() function needs to see argc and argv so that it can perform
    * any ROS arguments and name remapping that were provided at the command line.
@@ -95,7 +96,7 @@ int main(int argc, char **argv)
 
     auto transform = transformStamped.transform;
     coordinate current_cell(transform.translation.x, transform.translation.y);
-    auto path = dstar.navigate_map(current_cell);
+    auto path = dstar->navigate_map(current_cell);
 
     msg = get_next_move(path, transform);
 
