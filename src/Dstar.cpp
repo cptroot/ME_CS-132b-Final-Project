@@ -2,6 +2,20 @@
 #include "Dstar.hpp"
 #include <algorithm>
 
+std::vector<coordinate> Dstar::init_path() {
+    cell goal_c = Cell(0, 0, 0 ,Tag::Open, goal);
+    goal_c.b = goal;
+    put(goal, goal_c);
+    
+    while (1) {
+        double k_min = process_state();
+        cell start_c = get(start);
+        if (k_min == NONE) || (start.t == Tag::Closed) {
+            return get_path(start_c)
+        }
+    }
+}
+
 Dstar::Dstar() {
     world = new cell[world_x * world_y]
 }
@@ -100,21 +114,6 @@ std::vector<cell> Dstar::get_neighhors(cell curr) {
         }
     }
     return neighbors;
-}
-
-std::vector<coordinate> Dstar::init_path() {
-    cell goal_c = Cell(0, 0, 0 ,Tag::Open, goal);
-    goal_c.b = goal;
-    put(goal, goal_c);
-    
-    while (1) {
-        double k_min = process_state();
-        cell start_c = get(start);
-        if (k_min == NONE) || (start.t == Tag::Closed) {
-            return get_path(start_c)
-        }
-    }
-    
 }
 
 
