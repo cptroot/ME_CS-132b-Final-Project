@@ -15,6 +15,10 @@ std::vector<coordinate> Dstar::init_path() {
     }
 }
 
+void Dstar::insert(cell curr, double new_h) {
+    
+}
+
 //void Dstar::change_map(octomap::AbstractOcTree*);
 //std::vector<coordinate> Dstar::navigate_map(coordinate curr);
 //double Dstar::modify_costs(cell curr1, cell curr2, float new_cost);

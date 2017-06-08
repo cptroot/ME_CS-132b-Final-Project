@@ -1,3 +1,11 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Thu Mar 16 11:04:31 2017
+
+@author: Sith, Andrew, Evan
+"""
+
+import sys
 import math
 import Queue
 from graphics import Graphics
@@ -62,7 +70,6 @@ class D_Star:
 
     def put_open(self, cell):
         cell.t = 'o'
-        open_cells = [item[1] for item in self.pqueue.queue]
         
         self.pqueue.put((cell.h, cell.loc))
 
@@ -70,6 +77,7 @@ class D_Star:
         try:
             return sorted(self.pqueue.queue)[0][0]
         except:
+            print "Unexpected error:", sys.exc_info()[0]
             return None
 
     def get_cost(self, curr1, curr2):
@@ -81,12 +89,18 @@ class D_Star:
     def get_path(self, curr):
         path = [curr.loc]
 
+        print "getting path from {}".format(curr.loc)
+        print "open list: {}".format(self.pqueue.queue)
+
         while True:
             curr = curr.b
 
             if curr == None:
                 return None
             else:
+                print curr.loc
+                if curr.loc in path:
+                    raise Exception('Recursive backlinks')
                 path.append(curr.loc)
 
                 if curr.loc == self.goal:
@@ -105,6 +119,8 @@ class D_Star:
         
         for j in xrange(min_y, max_y + 1):
             for i in xrange(min_x, max_x + 1):
+                if (i, j) == (x, y):
+                    continue
                 neighbors.append(self.get((i, j)))
 
         return neighbors
@@ -119,6 +135,7 @@ class D_Star:
 
         while True:
             k_min = self.process_state()
+            print "Got k_min: {}".format(k_min)
             start = self.get(self.start)
 
             if k_min == None or start.t == 'c':
@@ -126,18 +143,23 @@ class D_Star:
 
     def change_map(self, actual_map, curr):
         for sensed in self.get_neighbors(curr):
-            for neighbor in self.get_neighbors(sensed):
-                i, j = neighbor.loc
-
-                if (actual_map[j][i]):
-                    self.obstacles.append((i, j))
-                    self.modify_costs(sensed, neighbor, float("inf"))
+            i, j = sensed.loc
+            if actual_map[j][i]:
+                self.insert(sensed, sensed.k)
+                for neighbor in self.get_neighbors(sensed):
+                    if self.costs[j][i][neighbor.loc[1]][neighbor.loc[0]] != float("inf"):
+                        if not (i, j) in self.obstacles:
+                            print "found obstacle: {}".format((i, j))
+                            self.obstacles.append((i, j))
+                        self.modify_costs(neighbor, sensed, float("inf"))
 
     def navigate_map(self, curr):
         while True:
             k_min = self.process_state()
 
-            if k_min == None or curr.h <= k_min:
+            print "Got k_min: {}".format(k_min)
+
+            if (k_min == None or curr.h <= k_min) and not curr.t == 'o':
                 return self.get_path(curr)
 
     def modify_costs(self, curr1, curr2, new_c):
@@ -152,36 +174,42 @@ class D_Star:
         return self.get_kmin()
 
     def insert(self, curr, h_new):
-        existing = [item[1] for item in self.pqueue.queue]
-        if curr in existing:
-            return
-
+        print "inserting {} {} {}".format(curr.loc, curr.t, h_new)
         if curr.t == 'n':
+            curr.h = h_new
             curr.k = h_new
+            self.put_open(curr)
         elif curr.t == 'o':
+            curr.h = h_new
             curr.k = min(curr.k, h_new)
+            indexes = [i for i,x in enumerate(self.pqueue.queue) if x[1] == curr.loc]
+            for index in indexes:
+                self.pqueue.queue[index] = (curr.k, curr.loc)
         elif curr.t == 'c':
+            curr.h = h_new
             curr.k = min(curr.h, h_new)
+            self.put_open(curr)
 
-        curr.h = h_new
-
-
-        self.put_open(curr)
 
     def process_state(self):
         k_old, curr = self.get_open()
+
         
         if k_old == None:
+            print "popped {} from the open queue".format(k_old)
             return None
 
+        print "popped ({}, {}) from the open queue with h: {}".format(k_old, curr.loc, curr.h)
+
         if k_old < curr.h:
+            print "Raise {}".format(curr.loc)
             for neighbor in self.get_neighbors(curr):
-                if curr.t != 'n' and curr.h <= k_old \
+                if neighbor.t != 'n' and neighbor.h <= k_old \
                 and curr.h > neighbor.h + self.get_cost(neighbor, curr):
                     curr.b = neighbor
                     curr.h = neighbor.h + self.get_cost(neighbor, curr)
 
-        elif k_old == curr.h:
+        if k_old == curr.h:
             for neighbor in self.get_neighbors(curr):
                 if (neighbor.t == 'n') \
                 or (neighbor.b == curr and neighbor.h != curr.h + self.get_cost(curr, neighbor)) \
