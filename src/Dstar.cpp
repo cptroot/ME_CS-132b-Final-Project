@@ -3,31 +3,38 @@
 #include <algorithm>
 
 std::vector<coordinate> Dstar::init_path() {
-    cell * goal_c = get_ptr(goal);
+    cell * goal_c = this->get_ptr(goal);
     *goal_c = cell(0, 0, goal_c, Tag::Open, goal);
     
     while (1) {
-        get_kmin_result k_min = process_state();
-        cell * start_c = get_ptr(start);
+        get_kmin_result k_min = this->process_state();
+        cell * start_c = this->get_ptr(start);
         if ((k_min.exists == false) || (start_c->t == Tag::Closed)) {
-            return get_path(start_c);
+            return this->get_path(start_c);
         }
     }
 }
 
-void change_map(octomap::AbstractOcTree*) {
-    for (int i = 0; i < get_neighhors.size(); i++) {
-        coordinate locate = get_neighhors[i].loc;
+void Dstar::change_map(octomap::AbstractOcTree*) {
+    auto curr = this->get_ptr(coordinate(0, 0));
+    auto neighbors = this->get_neighbors(curr->loc);
+    for (auto neighbor_it = neighbors.begin(); neighbor_it < neighbors.end(); neighbor_it++) {
+        auto neighbor = *neighbor_it;
+        coordinate locate = neighbor->loc;
     }
 }
 
+//double Dstar::modify_costs(cell curr1, cell curr2, float new_cost);
 
 std::vector<coordinate> Dstar::navigate_map(coordinate curr) {
+    cell * curr_cell_ptr = this->get_ptr(curr);
     while(1) {
-        get_kmin_result k_min = process_state();
+        get_kmin_result k_min = this->process_state();
         
-        if ((k_min.exists == false) || (curr.h <= k_min.kmin)) && !(curr.t == Tag::Open) {
-            return get_path();
+        if (((k_min.exists == false) ||
+                    (curr_cell_ptr->h <= k_min.kmin)) &&
+                !(curr_cell_ptr->t == Tag::Open)) {
+            return this->get_path(curr_cell_ptr);
         }
     }
 }
@@ -37,26 +44,77 @@ void Dstar::insert(cell * curr, double new_h) {
         curr->h = new_h;
         curr->k = new_h;
         curr->t = Tag::Open;
-        put_open(curr);
+        this->put_open(curr);
     }
-    elif (curr->t = Tag::Open) {
+    else if (curr->t = Tag::Open) {
         curr->h = new_h;
         curr->k = std::min(curr->k, new_h);
         // Do STUFF
     }
-    elif (curr->t == Tag::Closed) {
+    else if (curr->t == Tag::Closed) {
         curr->h = new_h;
         curr->k = std::min(curr->h, new_h);
         curr->t = Tag::Open;
-        put_open(curr);
+        this->put_open(curr);
     }
 }
 
-//void Dstar::change_map(octomap::AbstractOcTree*);
-//std::vector<coordinate> Dstar::navigate_map(coordinate curr);
-//double Dstar::modify_costs(cell curr1, cell curr2, float new_cost);
-//void Dstar::insert(cell curr, double new_h);
-//get_kmin_result Dstar::process_state();
+get_kmin_result Dstar::process_state() {
+
+    auto tuple = this->get_open();
+    double k_old = std::get<0>(tuple);
+    cell * curr = std::get<1>(tuple);
+    
+    if (curr == NULL) {
+        get_kmin_result result;
+        result.exists = false;
+        result.kmin = -1.0;
+        return result;
+    }
+
+    if (k_old < curr->h) {
+        auto neighbors = this->get_neighbors(curr->loc);
+        for (auto neighbor_it = neighbors.begin(); neighbor_it < neighbors.end(); neighbor_it++) {
+            auto neighbor = *neighbor_it;
+            if (neighbor->t != 'n' && neighbor->h <= k_old \
+            && curr->h > neighbor->h + this->get_cost(neighbor->loc, curr->loc)) {
+                curr->b = neighbor;
+                curr->h = neighbor->h + this->get_cost(neighbor->loc, curr->loc);
+            }
+        }
+    }
+
+    if (k_old == curr->h) {
+        auto neighbors = this->get_neighbors(curr->loc);
+        for (auto neighbor_it = neighbors.begin(); neighbor_it < neighbors.end(); neighbor_it++) {
+            auto neighbor = *neighbor_it;
+            if ((neighbor->t == 'n') ||
+                    (neighbor->b == curr && neighbor->h != curr->h + this->get_cost(curr->loc, neighbor->loc)) ||
+                    (neighbor->b != curr && neighbor->h > curr->h + this->get_cost(curr->loc, neighbor->loc))) {
+                neighbor->b = curr;
+                this->insert(neighbor, curr->h + this->get_cost(curr->loc, neighbor->loc));
+            }
+        }
+    } else {
+        auto neighbors = this->get_neighbors(curr->loc);
+        for (auto neighbor_it = neighbors.begin(); neighbor_it < neighbors.end(); neighbor_it++) {
+            auto neighbor = *neighbor_it;
+            if (neighbor->t == 'n' ||
+                    (neighbor->b == curr && neighbor->h != curr->h + this->get_cost(curr->loc, neighbor->loc))) {
+                neighbor->b = curr;
+                this->insert(neighbor, curr->h + this->get_cost(curr->loc, neighbor->loc));
+
+            } else if (neighbor->b != curr && neighbor->h > curr->h + this->get_cost(curr->loc, neighbor->loc)) {
+                this->insert(curr, curr->h);
+            } else if (neighbor->b != curr && curr->h > neighbor->h + this->get_cost(curr->loc, neighbor->loc) &&
+                    neighbor->t == 'c' && neighbor->h > k_old) {
+                this->insert(neighbor, neighbor->h);
+            }
+        }
+    }
+
+    return this->get_kmin();
+}
 
 Dstar::Dstar(coordinate size, coordinate start, coordinate goal) :
         size(size), start(start), goal(goal) {
@@ -77,7 +135,7 @@ cell * Dstar::get_ptr(coordinate n) {
 }
 
 void Dstar::put(coordinate n, cell curr) {
-    *get_ptr(n) = curr;   
+    *this->get_ptr(n) = curr;   
 }
 
 std::tuple<double, cell *> Dstar::get_open() {
@@ -119,9 +177,9 @@ get_kmin_result Dstar::get_kmin() {
     }
 }
 
-double Dstar::get_cost(cell curr1, cell curr2) {
+double Dstar::get_cost(coordinate loc1, coordinate loc2) {
     // Unsure what structure of cost
-    return costs[curr2.loc.x + curr2.loc.y * size.x];
+    return costs[loc2.x + loc2.y * size.x];
 }
 
 std::vector<coordinate> Dstar::get_path(cell *curr) {
@@ -138,17 +196,17 @@ std::vector<coordinate> Dstar::get_path(cell *curr) {
         else {
             path.push_back(temp->loc);
             
-            if ((temp->loc.x == goal.x) and (temp->loc.y == goal.y)) {
+            if ((temp->loc.x == goal.x) && (temp->loc.y == goal.y)) {
                 return path;
             }
         }          
     }
 }
 
-std::vector<cell> Dstar::get_neighhors(cell curr) {
-    std::vector<cell> neighbors;
-    int x = curr.loc.x;
-    int y = curr.loc.y;
+std::vector<cell *> Dstar::get_neighbors(coordinate loc) {
+    std::vector<cell *> neighbors;
+    int x = loc.x;
+    int y = loc.y;
     
     int min_y = std::max(0, y - 1);
     int max_y = std::min(size.y - 1, y + 1);
@@ -157,10 +215,11 @@ std::vector<cell> Dstar::get_neighhors(cell curr) {
     
     for (int j = min_y; j < max_y + 1; j++) {
         for (int i = min_x; i < max_x + 1; i++) {
+            if (i == x && j == y) { continue; }
             coordinate loc;
             loc.x = i;
             loc.y = j;
-            neighbors.push_back(get(loc));
+            neighbors.push_back(get_ptr(loc));
         }
     }
     return neighbors;

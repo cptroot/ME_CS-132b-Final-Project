@@ -75,7 +75,8 @@ class Dstar {
         get_kmin_result get_kmin();
             
         double get_cost(cell curr1, cell curr2);
+        double get_cost(coordinate loc1, coordinate loc2);
         std::vector<coordinate> get_path(cell *curr);
-        std::vector<cell> get_neighhors(cell curr);
+        std::vector<cell *> get_neighbors(coordinate loc);
 };
 

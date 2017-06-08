@@ -195,7 +195,6 @@ class D_Star:
 
     def process_state(self):
         k_old, curr = self.get_open()
-
         
         if k_old == None:
             print "popped {} from the open queue".format(k_old)
