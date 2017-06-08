@@ -178,6 +178,7 @@ class D_Star:
         if curr.t == 'n':
             curr.h = h_new
             curr.k = h_new
+            curr.t = 'o'
             self.put_open(curr)
         elif curr.t == 'o':
             curr.h = h_new
@@ -188,8 +189,9 @@ class D_Star:
         elif curr.t == 'c':
             curr.h = h_new
             curr.k = min(curr.h, h_new)
+            curr.t = 'o'
             self.put_open(curr)
-
+    
 
     def process_state(self):
         k_old, curr = self.get_open()

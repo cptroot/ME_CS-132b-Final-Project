@@ -15,8 +15,41 @@ std::vector<coordinate> Dstar::init_path() {
     }
 }
 
-void Dstar::insert(cell curr, double new_h) {
-    
+void change_map(octomap::AbstractOcTree*) {
+    for (int i = 0; i < get_neighhors.size(); i++) {
+        coordinate locate = get_neighhors[i].loc;
+    }
+}
+
+
+std::vector<coordinate> Dstar::navigate_map(coordinate curr) {
+    while(1) {
+        get_kmin_result k_min = process_state();
+        
+        if ((k_min.exists == false) || (curr.h <= k_min.kmin)) && !(curr.t == Tag::Open) {
+            return get_path();
+        }
+    }
+}
+
+void Dstar::insert(cell * curr, double new_h) {
+    if (curr->t == Tag::New) {
+        curr->h = new_h;
+        curr->k = new_h;
+        curr->t = Tag::Open;
+        put_open(curr);
+    }
+    elif (curr->t = Tag::Open) {
+        curr->h = new_h;
+        curr->k = std::min(curr->k, new_h);
+        // Do STUFF
+    }
+    elif (curr->t == Tag::Closed) {
+        curr->h = new_h;
+        curr->k = std::min(curr->h, new_h);
+        curr->t = Tag::Open;
+        put_open(curr);
+    }
 }
 
 //void Dstar::change_map(octomap::AbstractOcTree*);

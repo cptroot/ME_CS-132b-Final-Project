@@ -56,7 +56,7 @@ class Dstar {
         void change_map(octomap::AbstractOcTree*);
         std::vector<coordinate> navigate_map(coordinate curr);
         double modify_costs(cell *curr1, cell *curr2, float new_cost);
-        void insert(cell curr, double new_h);
+        void insert(cell *curr, double new_h);
         get_kmin_result process_state();
         
     private:
