@@ -55,7 +55,7 @@ class Dstar {
         std::vector<coordinate> init_path();
         void change_map(octomap::OcTree*);
         std::vector<coordinate> navigate_map(coordinate curr);
-        void modify_costs(coordinate loc, double new_cost);
+        void add_obstacle(coordinate loc, double new_cost);
         void insert(cell *curr, double new_h);
         get_kmin_result process_state();
         
@@ -65,6 +65,7 @@ class Dstar {
 
         cell* world;
         double* costs;
+        double* occupancy;
         coordinate start;
         coordinate goal;
         coordinate size;
