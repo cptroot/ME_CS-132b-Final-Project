@@ -42,22 +42,38 @@ void Dstar::change_map(octomap::OcTree * tree) {
 
         for (int j = min_y; j < max_y; j++) {
             for (int i = min_x; i < max_y; i++) {
-                if (this->costs[i + j * size.x] < leaf_bbx_it->getOccupancy() * 1000) {
+                if (!this->occupancy[i + j * size.x] < leaf_bbx_it->getOccupancy()) {
                     // Update new cost
-                    this->modify_costs(coordinate(i, j), leaf_bbx_it->getOccupancy());
+                    this->add_obstacle(coordinate(i, j), leaf_bbx_it->getOccupancy());
                 }
             }
         }
     }
 }
 
-void Dstar::modify_costs(coordinate loc, double new_probability) {
-    ROS_INFO("New Cost at (%d, %d): %f", loc.x, loc.y, new_probability * 1000);
-    this->costs[loc.x + loc.y * size.x] = new_probability * 1000;
+void Dstar::add_obstacle(coordinate loc, double new_probability) {
+    ROS_INFO("Updated obstacle at (%d, %d): %f", loc.x, loc.y, new_probability * 1000);
 
-    cell * curr = this->get_ptr(loc);
-    if (curr->t == Tag::Closed) {
-        this->insert(curr, curr->h);
+    double diff = new_probability - this->occupancy[loc.x + loc.y * size.x];
+
+    int min_x = std::max(0, loc.x - 5);
+    int max_x = std::min(size.x, loc.x + 6);
+    int min_y = std::max(0, loc.y - 5);
+    int max_y = std::min(size.y, loc.y + 6);
+
+    double max_distance = std::sqrt(5.0 * 5 * 2);
+
+    for (int j = min_y; j < max_y; j++) {
+        for (int i = min_x; i < max_x; i++) {
+            double distance = std::sqrt(i * i + j * j);
+            double multiplier = 1000.0 - distance * 1000 / max_distance;
+            this->costs[i + j * size.x] += diff * multiplier;
+
+            cell * curr = this->get_ptr(coordinate(i, j));
+            if (curr->t == Tag::Closed) {
+                this->insert(curr, curr->h);
+            }
+        }
     }
 }
 
@@ -153,11 +169,18 @@ Dstar::Dstar(coordinate start, coordinate goal, double height) :
     size = coordinate(65536/16, 65536/16);
     world = new cell[size.x * size.y];
     costs = new double[size.x * size.y];
+    std::fill(costs, costs + size.x * size.y, 0.0);
+
+    occupancy = new double[size.x * size.y];
+    std::fill(occupancy, occupancy + size.x * size.y, 0.0);
+
     offset = (65536 - size.x) / 2;
 }
 
 Dstar::~Dstar() {
     delete world;
+    delete costs;
+    delete occupancy;
 }
 
 cell Dstar::get(coordinate n) {
