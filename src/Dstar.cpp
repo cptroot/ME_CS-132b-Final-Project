@@ -45,13 +45,12 @@ void Dstar::insert(cell * curr, double new_h) {
         curr->k = new_h;
         curr->t = Tag::Open;
         this->put_open(curr);
-    }
-    else if (curr->t = Tag::Open) {
+    } else if (curr->t = Tag::Open) {
         curr->h = new_h;
         curr->k = std::min(curr->k, new_h);
-        // Do STUFF
-    }
-    else if (curr->t == Tag::Closed) {
+
+        std::make_heap(pqueue.begin(), pqueue.end());
+    } else if (curr->t == Tag::Closed) {
         curr->h = new_h;
         curr->k = std::min(curr->h, new_h);
         curr->t = Tag::Open;
@@ -60,10 +59,7 @@ void Dstar::insert(cell * curr, double new_h) {
 }
 
 get_kmin_result Dstar::process_state() {
-
-    auto tuple = this->get_open();
-    double k_old = std::get<0>(tuple);
-    cell * curr = std::get<1>(tuple);
+    auto curr = this->get_open();
     
     if (curr == NULL) {
         get_kmin_result result;
@@ -72,19 +68,20 @@ get_kmin_result Dstar::process_state() {
         return result;
     }
 
-    if (k_old < curr->h) {
+    if (curr->k < curr->h) {
         auto neighbors = this->get_neighbors(curr->loc);
         for (auto neighbor_it = neighbors.begin(); neighbor_it < neighbors.end(); neighbor_it++) {
             auto neighbor = *neighbor_it;
-            if (neighbor->t != 'n' && neighbor->h <= k_old \
-            && curr->h > neighbor->h + this->get_cost(neighbor->loc, curr->loc)) {
+            if (neighbor->t != 'n' &&
+                    neighbor->h <= curr->k &&
+                    curr->h > neighbor->h + this->get_cost(neighbor->loc, curr->loc)) {
                 curr->b = neighbor;
                 curr->h = neighbor->h + this->get_cost(neighbor->loc, curr->loc);
             }
         }
     }
 
-    if (k_old == curr->h) {
+    if (curr->k == curr->h) {
         auto neighbors = this->get_neighbors(curr->loc);
         for (auto neighbor_it = neighbors.begin(); neighbor_it < neighbors.end(); neighbor_it++) {
             auto neighbor = *neighbor_it;
@@ -107,7 +104,7 @@ get_kmin_result Dstar::process_state() {
             } else if (neighbor->b != curr && neighbor->h > curr->h + this->get_cost(curr->loc, neighbor->loc)) {
                 this->insert(curr, curr->h);
             } else if (neighbor->b != curr && curr->h > neighbor->h + this->get_cost(curr->loc, neighbor->loc) &&
-                    neighbor->t == 'c' && neighbor->h > k_old) {
+                    neighbor->t == 'c' && neighbor->h > curr->k) {
                 this->insert(neighbor, neighbor->h);
             }
         }
@@ -138,19 +135,15 @@ void Dstar::put(coordinate n, cell curr) {
     *this->get_ptr(n) = curr;   
 }
 
-std::tuple<double, cell *> Dstar::get_open() {
+cell * Dstar::get_open() {
     if (!pqueue.empty()) {
-        auto item = pqueue.top();
-        pqueue.pop();
-        coordinate location = std::get<1>(item);
-        cell *curr = get_ptr(location);
+        auto curr = pqueue.front();
+        std::pop_heap(pqueue.begin(), pqueue.end());
+        pqueue.pop_back();
         curr->t = Tag::Closed;
-
-        return std::make_tuple(std::get<0>(item), curr);
-        
-    }
-    else {
-        return std::make_tuple(-1.0, (cell *)NULL);
+        return curr;
+    } else {
+        return NULL;
     }
 }
 
@@ -158,16 +151,16 @@ void Dstar::put_open(cell * curr) {
     curr->t = Tag::Open;
     // open_cells
     
-    auto item = std::make_tuple(curr->h, curr->loc);
-    pqueue.push(item);
+    pqueue.push_back(curr);
+    std::push_heap(pqueue.begin(), pqueue.end());
 }
 
 get_kmin_result Dstar::get_kmin() {
     get_kmin_result result;
     if (!pqueue.empty()) {
-        auto item = pqueue.top();
+        auto curr = pqueue.front();
         result.exists = true;
-        result.kmin = std::get<0>(item);
+        result.kmin = curr->k;
         return result;
     }
     else {

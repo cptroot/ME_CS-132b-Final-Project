@@ -65,12 +65,12 @@ class Dstar {
         coordinate start;
         coordinate goal;
         coordinate size;
-        std::priority_queue<pqueue_type, std::vector<pqueue_type>, Compare> pqueue;
+        std::vector<cell *> pqueue;
 
         cell get(coordinate n);
         cell * get_ptr(coordinate n);
         void put(coordinate n, cell item);
-        std::tuple<double, cell *> get_open();  
+        cell * get_open();  
         void put_open(cell *);
         get_kmin_result get_kmin();
             
