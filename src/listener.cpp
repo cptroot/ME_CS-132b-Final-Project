@@ -1,5 +1,6 @@
 #include <ros/ros.h>
 #include <tf2_ros/transform_listener.h>
+#include <tf2_ros/transform_datatypes.h>
 #include <std_msgs/String.h>
 
 #include <geometry_msgs/Twist.h>
@@ -8,7 +9,7 @@
 #include <octomap_msgs/conversions.h>
 
 #include <octomap/octomap.h>
-
+#include <math.h>
 
 #include "Dstar.hpp"
 
@@ -36,6 +37,37 @@ geometry_msgs::Twist get_next_move(
   geometry_msgs::Twist result;
 
   return result;
+}
+
+struct nav_inst {
+    float linear_x;
+    float linear_y;'
+    float angular_z;
+    
+    nav_inst() {}
+    nav_inst(float x, float y, float z) : linear_x(x), linear_y(y), angular_z(z) {}
+};
+
+nav_inst navigation(coordinate curr, coordinate next, double angle_) {
+    const double PI = 3.141592653589793;
+    double new_angle_ = atan2(next.y - curr.y, next.x - next.y);
+    double new_angle = new_angle_ % PI;
+    double angle = angle_ % PI;
+    
+    if (fabs(angle - new_angle) > 0.5) {
+        if (angle > new_angle) {
+            return nav_inst(0, 0, 0.5);
+        }
+        else {
+            return nav_inst(0, 0, -0.5);
+        }
+    }
+    else if ((fabs(curr.x - next.x) > 0.5) && (fabs(curr.y - next.y) > 0,5)) {
+        return (nav_inst(0.1, 0, 0);
+    }
+    else{
+        return nav_inst(0,0,0);
+    }
 }
 
 int main(int argc, char **argv)
@@ -102,6 +134,11 @@ int main(int argc, char **argv)
 
     auto transform = transformStamped.transform;
     coordinate current_cell(transform.translation.x, transform.translation.y);
+    geometry_msgs::Quaternion quat = transform.rotation;
+    tf::Quaternion q(quat.x, quat.y, quat.z, quat.w);
+    tf::Matrix3x3 m(q);
+    double roll, pitch, yaw;
+    m.getRPY(roll, pitch, yaw);
     auto path = dstar->navigate_map(current_cell);
 
     msg = get_next_move(path, transform);
