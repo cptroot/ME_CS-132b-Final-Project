@@ -1,6 +1,9 @@
 #include <stdio.h>
 #include "Dstar.hpp"
 #include <algorithm>
+#include <cmath>
+
+#include <ros/ros.h>
 
 std::vector<coordinate> Dstar::init_path() {
     cell * goal_c = this->get_ptr(goal);
@@ -15,16 +18,48 @@ std::vector<coordinate> Dstar::init_path() {
     }
 }
 
-void Dstar::change_map(octomap::AbstractOcTree*) {
-    auto curr = this->get_ptr(coordinate(0, 0));
-    auto neighbors = this->get_neighbors(curr->loc);
-    for (auto neighbor_it = neighbors.begin(); neighbor_it < neighbors.end(); neighbor_it++) {
-        auto neighbor = *neighbor_it;
-        coordinate locate = neighbor->loc;
+void Dstar::change_map(octomap::OcTree * tree) {
+    //auto center = octomap::point3d(0, 0, 0);
+    //auto half_size = tree->getNodeSize(0) / 2;
+    //auto min_bbx = octomap::point3d(center.x() - half_size, center.y() - half_size, height - 0.5);
+    //auto max_bbx = octomap::point3d(center.x() + half_size, center.y() + half_size, height + 0.5);
+    for (auto leaf_bbx_it = tree->begin_leafs(16);
+            leaf_bbx_it != tree->end_leafs();
+            leaf_bbx_it++) {
+        // Find current bounds, iterate through affected cells
+        auto leaf_center = leaf_bbx_it.getCoordinate();
+        auto leaf_half_size = leaf_bbx_it.getSize() / 2;
+
+        int min_x = tree->coordToKey(leaf_center.x() - leaf_half_size);
+        int max_x = tree->coordToKey(leaf_center.x() + leaf_half_size);
+        int min_y = tree->coordToKey(leaf_center.y() - leaf_half_size);
+        int max_y = tree->coordToKey(leaf_center.y() + leaf_half_size);
+
+        min_x = std::max(min_x - offset, 0);
+        max_x = std::min(max_x - offset, size.x);
+        min_y = std::max(min_y - offset, 0);
+        max_y = std::min(max_y - offset, size.y);
+
+        for (int j = min_y; j < max_y; j++) {
+            for (int i = min_x; i < max_y; i++) {
+                if (this->costs[i + j * size.x] < leaf_bbx_it->getOccupancy() * 1000) {
+                    // Update new cost
+                    this->modify_costs(coordinate(i, j), leaf_bbx_it->getOccupancy());
+                }
+            }
+        }
     }
 }
 
-//double Dstar::modify_costs(cell curr1, cell curr2, float new_cost);
+void Dstar::modify_costs(coordinate loc, double new_probability) {
+    ROS_INFO("New Cost at (%d, %d): %f", loc.x, loc.y, new_probability * 1000);
+    this->costs[loc.x + loc.y * size.x] = new_probability * 1000;
+
+    cell * curr = this->get_ptr(loc);
+    if (curr->t == Tag::Closed) {
+        this->insert(curr, curr->h);
+    }
+}
 
 std::vector<coordinate> Dstar::navigate_map(coordinate curr) {
     cell * curr_cell_ptr = this->get_ptr(curr);
@@ -113,10 +148,12 @@ get_kmin_result Dstar::process_state() {
     return this->get_kmin();
 }
 
-Dstar::Dstar(coordinate size, coordinate start, coordinate goal) :
-        size(size), start(start), goal(goal) {
+Dstar::Dstar(coordinate start, coordinate goal, double height) :
+        start(start), goal(goal), height(height) {
+    size = coordinate(65536/16, 65536/16);
     world = new cell[size.x * size.y];
     costs = new double[size.x * size.y];
+    offset = (65536 - size.x) / 2;
 }
 
 Dstar::~Dstar() {
@@ -172,7 +209,10 @@ get_kmin_result Dstar::get_kmin() {
 
 double Dstar::get_cost(coordinate loc1, coordinate loc2) {
     // Unsure what structure of cost
-    return costs[loc2.x + loc2.y * size.x];
+    int diff_x = loc1.x - loc2.x;
+    int diff_y = loc1.y - loc2.y;
+    double distance = std::sqrt((double)(diff_x * diff_x + diff_y * diff_y));
+    return costs[loc2.x + loc2.y * size.x] + distance;
 }
 
 std::vector<coordinate> Dstar::get_path(cell *curr) {

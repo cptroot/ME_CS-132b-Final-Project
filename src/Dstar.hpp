@@ -49,17 +49,20 @@ class Compare {
 
 class Dstar {
     public:
-        Dstar(coordinate size, coordinate start, coordinate goal);
+        Dstar(coordinate start, coordinate goal, double height);
         ~Dstar();
        
         std::vector<coordinate> init_path();
-        void change_map(octomap::AbstractOcTree*);
+        void change_map(octomap::OcTree*);
         std::vector<coordinate> navigate_map(coordinate curr);
-        double modify_costs(cell *curr1, cell *curr2, float new_cost);
+        void modify_costs(coordinate loc, double new_cost);
         void insert(cell *curr, double new_h);
         get_kmin_result process_state();
         
     private:
+        double height;
+        int offset;
+
         cell* world;
         double* costs;
         coordinate start;

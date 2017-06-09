@@ -21,9 +21,11 @@ void octomapCallback(const octomap_msgs::Octomap& msg)
 {
   ROS_INFO("I heard: [%s]", msg.id.c_str());
 
-  octomap::AbstractOcTree * tree = octomap_msgs::msgToMap(msg);
+  octomap::OcTree * tree = (octomap::OcTree *)octomap_msgs::msgToMap(msg);
 
   ROS_INFO("Tree size: %lu", tree->size());
+
+  ROS_INFO("root node size: %f", tree->getNodeSize(0));
 
   dstar->change_map(tree);
 }
@@ -38,7 +40,6 @@ geometry_msgs::Twist get_next_move(
 
 int main(int argc, char **argv)
 {
-    dstar = new Dstar(coordinate(100, 100), coordinate(0, 0), coordinate(100, 100));
   /**
    * The ros::init() function needs to see argc and argv so that it can perform
    * any ROS arguments and name remapping that were provided at the command line.
@@ -76,17 +77,22 @@ int main(int argc, char **argv)
   ros::Subscriber sub = n.subscribe("octomap", 10, octomapCallback);
   ros::Publisher cmd_vel_publisher = n.advertise<geometry_msgs::Twist>("cmd_vel", 10);
 
+  ROS_INFO("Created publisher and subscriber.");
+
   tf2_ros::Buffer tfBuffer;
   tf2_ros::TransformListener tfListener(tfBuffer);
+
+  double current_height = 0.75;
+  dstar = new Dstar(coordinate(65536 / 32 + 10, 65536 / 32 + 10), coordinate(65536 / 32 + 40, 65536 / 32 + 10), current_height);
 
   ros::Rate loop_rate(10);
 
   while (ros::ok()) {
-    geometry_msgs::Twist msg;
+    /*geometry_msgs::Twist msg;
     geometry_msgs::TransformStamped transformStamped;
     try {
         transformStamped =
-            tfBuffer.lookupTransform("/world", "/base_link",
+            tfBuffer.lookupTransform("world", "base_link",
             ros::Time(0));
     } catch (tf2::TransformException &ex) {
         ROS_WARN("%s",ex.what());
@@ -100,7 +106,7 @@ int main(int argc, char **argv)
 
     msg = get_next_move(path, transform);
 
-    cmd_vel_publisher.publish(msg);
+    cmd_vel_publisher.publish(msg);*/
 
     ros::spinOnce();
 
