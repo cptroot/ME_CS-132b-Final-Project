@@ -1,6 +1,7 @@
 #include <ros/ros.h>
 #include <tf2_ros/transform_listener.h>
-#include <tf2_ros/transform_datatypes.h>
+#include <tf2/transform_datatypes.h>
+#include <tf2/LinearMath/Matrix3x3.h>
 #include <std_msgs/String.h>
 
 #include <geometry_msgs/Twist.h>
@@ -31,28 +32,49 @@ void octomapCallback(const octomap_msgs::Octomap& msg)
   dstar->change_map(tree);
 }
 
-geometry_msgs::Twist get_next_move(
-        std::vector<coordinate> path,
-        geometry_msgs::Transform) {
-  geometry_msgs::Twist result;
-
-  return result;
-}
-
 struct nav_inst {
     float linear_x;
-    float linear_y;'
+    float linear_y;
     float angular_z;
     
     nav_inst() {}
     nav_inst(float x, float y, float z) : linear_x(x), linear_y(y), angular_z(z) {}
 };
 
+nav_inst navigation(coordinate curr, coordinate next, double angle_);
+
+geometry_msgs::Twist get_next_move(
+        std::vector<coordinate> path,
+        coordinate curr_cell,
+        geometry_msgs::Transform tf) {
+  geometry_msgs::Twist result;
+
+  if (path.size() > 1) {
+        geometry_msgs::Quaternion quat = tf.rotation;
+        tf2::Quaternion q(quat.x, quat.y, quat.z, quat.w);
+        tf2::Matrix3x3 m(q);
+        double roll, pitch, yaw;
+        m.getRPY(roll, pitch, yaw);
+
+        coordinate next = path[1];
+
+        auto navigation_instruction = navigation(curr_cell, next, yaw);
+
+        result.linear.x = navigation_instruction.linear_x;
+        result.linear.y = navigation_instruction.linear_y;
+        result.angular.z = navigation_instruction.angular_z;
+
+        return result;
+  } else {
+      return result;
+  }
+}
+
 nav_inst navigation(coordinate curr, coordinate next, double angle_) {
     const double PI = 3.141592653589793;
     double new_angle_ = atan2(next.y - curr.y, next.x - next.y);
-    double new_angle = new_angle_ % PI;
-    double angle = angle_ % PI;
+    double new_angle = fmod(new_angle_, (2 * PI));
+    double angle = fmod(angle_, (2 * PI));
     
     if (fabs(angle - new_angle) > 0.5) {
         if (angle > new_angle) {
@@ -63,7 +85,7 @@ nav_inst navigation(coordinate curr, coordinate next, double angle_) {
         }
     }
     else if ((fabs(curr.x - next.x) > 0.5) && (fabs(curr.y - next.y) > 0,5)) {
-        return (nav_inst(0.1, 0, 0);
+        return nav_inst(0.1, 0, 0);
     }
     else{
         return nav_inst(0,0,0);
@@ -114,13 +136,32 @@ int main(int argc, char **argv)
   tf2_ros::Buffer tfBuffer;
   tf2_ros::TransformListener tfListener(tfBuffer);
 
-  double current_height = 0.75;
-  dstar = new Dstar(coordinate(65536 / 32 + 10, 65536 / 32 + 10), coordinate(65536 / 32 + 40, 65536 / 32 + 10), current_height);
+  geometry_msgs::Transform startTransform;
+  bool foundStart = false;
+
+  while (!foundStart) {
+    try {
+        auto transformStamped =
+            tfBuffer.lookupTransform("map", "cam0",
+            ros::Time(0));
+        startTransform = transformStamped.transform;
+        foundStart = true;
+    } catch (tf2::TransformException &ex) {
+        ROS_WARN("%s",ex.what());
+        ros::Duration(1.0).sleep();
+        continue;
+    }
+  }
+
+  double current_height = startTransform.translation.z;
+  coordinate start = coordinate(std::round(startTransform.translation.x * 10), std::round(startTransform.translation.y * 10));
+  coordinate goal = coordinate(start.x + 10, start.y);
+  dstar = new Dstar(coordinate(65536 / 32 + start.x, 65536 / 32 + start.y), coordinate(65536 / 32 + goal.x, 65536 / 32 + goal.y), current_height);
 
   ros::Rate loop_rate(10);
 
   while (ros::ok()) {
-    /*geometry_msgs::Twist msg;
+    geometry_msgs::Twist msg;
     geometry_msgs::TransformStamped transformStamped;
     try {
         transformStamped =
@@ -132,18 +173,14 @@ int main(int argc, char **argv)
         continue;
     }
 
-    auto transform = transformStamped.transform;
-    coordinate current_cell(transform.translation.x, transform.translation.y);
-    geometry_msgs::Quaternion quat = transform.rotation;
-    tf::Quaternion q(quat.x, quat.y, quat.z, quat.w);
-    tf::Matrix3x3 m(q);
-    double roll, pitch, yaw;
-    m.getRPY(roll, pitch, yaw);
-    auto path = dstar->navigate_map(current_cell);
+    auto tf = transformStamped.transform;
+    coordinate curr_cell(std::round(tf.translation.x * 10) + 65536 / 32,
+          std::round(tf.translation.y * 10) + 65536 / 32);
+    auto path = dstar->navigate_map(curr_cell);
 
-    msg = get_next_move(path, transform);
+    msg = get_next_move(path, curr_cell, tf);
 
-    cmd_vel_publisher.publish(msg);*/
+    cmd_vel_publisher.publish(msg);
 
     ros::spinOnce();
 
